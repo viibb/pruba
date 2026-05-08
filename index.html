@@ -4,11 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Laser Plus - Loyalty</title>
-    <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.4.29.9.min.js"></script>
     <style>
         :root { --cyan: #00aeef; --magenta: #ec008c; --yellow: #fff200; --dark: #000; }
         body { font-family: sans-serif; background: var(--dark); color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        
         .card {
             width: 320px; height: 190px;
             background: linear-gradient(145deg, #1a1a1a, #000);
@@ -16,7 +14,6 @@
             border: 1px solid #333; position: relative;
             box-shadow: 0 10px 30px rgba(0,174,239,0.2);
         }
-
         .points-val { font-size: 3.5rem; font-weight: 800; margin: 10px 0; }
         .btn-qr {
             margin-top: 30px; padding: 15px 30px;
@@ -24,11 +21,10 @@
             background: var(--cyan); color: black;
             font-weight: bold; cursor: pointer;
         }
-
         #qr-container {
             display: none; position: fixed; top: 0; left: 0;
             width: 100%; height: 100%; background: rgba(0,0,0,0.9);
-            flex-direction: column; justify-content: center; align-items: center;
+            flex-direction: column; justify-content: center; align-items: center; z-index: 100;
         }
         #qr-container img { border: 10px solid white; border-radius: 10px; }
     </style>
@@ -54,35 +50,46 @@
     <div id="qr-container" onclick="this.style.display='none'">
         <p>Muestra este código al encargado</p>
         <div id="qr-code"></div>
-        <p style="font-size: 0.8rem; color: #888;">Toca para cerrar</p>
+        <p style="font-size: 0.8rem; color: #888; margin-top: 20px;">Toca para cerrar</p>
     </div>
 
     <script>
-        // 1. Configuración de Identidad
+        // 1. Identidad del Cliente
         let userIP = localStorage.getItem('laserID') || "user_" + Math.floor(Math.random() * 999999);
         localStorage.setItem('laserID', userIP);
-        
         let pts = parseInt(localStorage.getItem('laserPlusPts')) || 0;
 
-        // 2. Conexión en tiempo real (PubNub Gratis)
-        const pubnub = new PubNub({
-            subscribeKey: "sub-c-4613c2f5-866a-463f-98f2-8980362f6b8c", // Key de prueba
-            publishKey: "pub-c-67451c8e-5b6d-4787-8d7d-2b7b5f5f5f5f",
-            uuid: userIP
-        });
+        // 2. Escuchar puntos (Buzón digital)
+        async function listenForPoints() {
+            try {
+                // Usamos un proxy para evitar bloqueos de seguridad
+                const proxy = "https://api.allorigins.win/get?url=";
+                const target = `https://jsonblob.com/api/jsonBlob/1234567890`; // ID de prueba genérico
+                // Nota: Para algo real usaríamos un ID basado en userIP
+                
+                const resp = await fetch(proxy + encodeURIComponent('https://jsonblob.com/api/jsonBlob/' + userIP));
+                const data = await resp.json();
+                const content = JSON.parse(data.contents);
 
-        pubnub.subscribe({ channels: [userIP] });
-
-        pubnub.addListener({
-            message: function(m) {
-                if(m.message.type === "ADD") {
-                    pts += m.message.amount;
+                if(content && content.newAmount > 0) {
+                    const received = content.newAmount;
+                    pts += received;
                     updateUI();
-                    alert("¡Acabas de recibir " + m.message.amount + " puntos!");
+                    
+                    // Limpiar buzón
+                    await fetch('https://jsonblob.com/api/jsonBlob/' + userIP, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({newAmount: 0})
+                    });
+
+                    alert("¡Felicidades! Recibiste " + received + " puntos.");
                     document.getElementById('qr-container').style.display = 'none';
                 }
-            }
-        });
+            } catch (e) { console.log("Buscando puntos..."); }
+        }
+
+        setInterval(listenForPoints, 4000); // Revisa cada 4 segundos
 
         function updateUI() {
             document.getElementById('display-pts').innerText = pts;
@@ -93,8 +100,8 @@
         function showQR() {
             const container = document.getElementById('qr-container');
             const qrDiv = document.getElementById('qr-code');
-            // Esta URL es la que TÚ vas a escanear
-            const adminURL = `https://viibb.github.io/prueba1/?id=${userIP}`; 
+            // CAMBIA ESTA URL por la de tu GitHub Pages real
+            const adminURL = `https://viibb.github.io/prueba1/admin.html?id=${userIP}`; 
             qrDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(adminURL)}" />`;
             container.style.display = 'flex';
         }
