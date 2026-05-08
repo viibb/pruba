@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laser Plus - Loyalty</title>
+    <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.4.29.9.min.js"></script>
+    <style>
+        :root { --cyan: #00aeef; --magenta: #ec008c; --yellow: #fff200; --dark: #000; }
+        body { font-family: sans-serif; background: var(--dark); color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        
+        .card {
+            width: 320px; height: 190px;
+            background: linear-gradient(145deg, #1a1a1a, #000);
+            border-radius: 20px; padding: 25px;
+            border: 1px solid #333; position: relative;
+            box-shadow: 0 10px 30px rgba(0,174,239,0.2);
+        }
+
+        .points-val { font-size: 3.5rem; font-weight: 800; margin: 10px 0; }
+        .btn-qr {
+            margin-top: 30px; padding: 15px 30px;
+            border-radius: 50px; border: none;
+            background: var(--cyan); color: black;
+            font-weight: bold; cursor: pointer;
+        }
+
+        #qr-container {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; background: rgba(0,0,0,0.9);
+            flex-direction: column; justify-content: center; align-items: center;
+        }
+        #qr-container img { border: 10px solid white; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <h2 style="text-transform:lowercase">laser <span style="color:var(--cyan)">plus!</span></h2>
+
+    <div class="card">
+        <div style="font-size: 0.7rem; letter-spacing: 2px; color: #888;">MIS PUNTOS</div>
+        <div class="points-val" id="display-pts">0</div>
+        <div style="color: var(--cyan); font-weight: bold;" id="display-cash">$0 MXN</div>
+        
+        <div style="position:absolute; bottom:20px; right:20px; display:flex; gap:5px;">
+            <div style="width:10px; height:10px; background:var(--yellow)"></div>
+            <div style="width:10px; height:10px; background:var(--magenta)"></div>
+            <div style="width:10px; height:10px; background:var(--cyan)"></div>
+        </div>
+    </div>
+
+    <button class="btn-qr" onclick="showQR()">GENERAR QR DE CARGA</button>
+
+    <div id="qr-container" onclick="this.style.display='none'">
+        <p>Muestra este código al encargado</p>
+        <div id="qr-code"></div>
+        <p style="font-size: 0.8rem; color: #888;">Toca para cerrar</p>
+    </div>
+
+    <script>
+        // 1. Configuración de Identidad
+        let userIP = localStorage.getItem('laserID') || "user_" + Math.floor(Math.random() * 999999);
+        localStorage.setItem('laserID', userIP);
+        
+        let pts = parseInt(localStorage.getItem('laserPlusPts')) || 0;
+
+        // 2. Conexión en tiempo real (PubNub Gratis)
+        const pubnub = new PubNub({
+            subscribeKey: "sub-c-4613c2f5-866a-463f-98f2-8980362f6b8c", // Key de prueba
+            publishKey: "pub-c-67451c8e-5b6d-4787-8d7d-2b7b5f5f5f5f",
+            uuid: userIP
+        });
+
+        pubnub.subscribe({ channels: [userIP] });
+
+        pubnub.addListener({
+            message: function(m) {
+                if(m.message.type === "ADD") {
+                    pts += m.message.amount;
+                    updateUI();
+                    alert("¡Acabas de recibir " + m.message.amount + " puntos!");
+                    document.getElementById('qr-container').style.display = 'none';
+                }
+            }
+        });
+
+        function updateUI() {
+            document.getElementById('display-pts').innerText = pts;
+            document.getElementById('display-cash').innerText = "$" + pts + " MXN";
+            localStorage.setItem('laserPlusPts', pts);
+        }
+
+        function showQR() {
+            const container = document.getElementById('qr-container');
+            const qrDiv = document.getElementById('qr-code');
+            // Esta URL es la que TÚ vas a escanear
+            const adminURL = `https://tu-web-admin.html?id=${userIP}`; 
+            qrDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(adminURL)}" />`;
+            container.style.display = 'flex';
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
