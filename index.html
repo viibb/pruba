@@ -94,7 +94,7 @@
             const container = document.getElementById('qr-container');
             const qrDiv = document.getElementById('qr-code');
             // Esta URL es la que TÚ vas a escanear
-            const adminURL = `https://tu-web-admin.html?id=${userIP}`; 
+            const adminURL = `https://viibb.github.io/prueba1/?id=${userIP}`; 
             qrDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(adminURL)}" />`;
             container.style.display = 'flex';
         }
