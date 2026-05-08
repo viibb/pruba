@@ -101,7 +101,7 @@
             const container = document.getElementById('qr-container');
             const qrDiv = document.getElementById('qr-code');
             // CAMBIA ESTA URL por la de tu GitHub Pages real
-            const adminURL = `https://viibb.github.io/prueba1/admin.html?id=${userIP}`; 
+            const adminURL = `https://viibb.github.io/prueba1/?id=${userIP}`; 
             qrDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(adminURL)}" />`;
             container.style.display = 'flex';
         }
